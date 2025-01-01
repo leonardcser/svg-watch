@@ -7,25 +7,35 @@
 #include <QPainter>
 #include <QPinchGesture>
 #include <QSvgRenderer>
+#include <QTimer>
+#include <QTransform>
 #include <QWheelEvent>
 #include <QWidget>
 
 class SvgWidget : public QWidget {
   public:
     SvgWidget(const QString &svgFilePath, QWidget *parent = nullptr)
-        : QWidget(parent), renderer(nullptr), scaleFactor(1.0), offset(0, 0) {
+        : QWidget(parent), renderer(nullptr), scaleFactor(1.0), offset(0, 0),
+          isDirty(false) {
         if (!QFileInfo::exists(svgFilePath)) {
             QMessageBox::critical(this, "Error", "SVG file not found!");
             return;
         }
-        // Initializing the renderer with the SVG file
-        loadSvg(svgFilePath);
 
+        // Initialize the update timer
+        updateTimer = new QTimer(this);
+        updateTimer->setSingleShot(true);
+        updateTimer->setInterval(10); // 10ms debounce
+        connect(updateTimer, &QTimer::timeout, this, [this]() {
+            isDirty = false;
+            update();
+        });
+
+        loadSvg(svgFilePath);
         this->setStyleSheet("background-color: white;");
         setAttribute(Qt::WA_AcceptTouchEvents, true);
         grabGesture(Qt::PinchGesture);
 
-        // Setting up the file system watcher
         fileWatcher.addPath(svgFilePath);
         connect(&fileWatcher, &QFileSystemWatcher::fileChanged, this,
                 &SvgWidget::onFileChanged);
@@ -52,7 +62,7 @@ class SvgWidget : public QWidget {
         // Scroll/pan normally
         offset +=
             QPoint(event->angleDelta().x() / 4, event->angleDelta().y() / 4);
-        update();
+        scheduleUpdate();
     }
 
     bool event(QEvent *event) override {
@@ -75,8 +85,7 @@ class SvgWidget : public QWidget {
                     QPointF deltaCenter = center - offset;
                     offset = QPoint(center.x() - deltaCenter.x() * scale,
                                     center.y() - deltaCenter.y() * scale);
-
-                    update();
+                    scheduleUpdate();
                 }
             }
         }
@@ -102,30 +111,34 @@ class SvgWidget : public QWidget {
                 (widgetRect.width() - svgSize.width() * scaleFactor) / 2,
                 (widgetRect.height() - svgSize.height() * scaleFactor) / 2);
 
-            update();
+            scheduleUpdate();
         }
         QWidget::keyPressEvent(event);
     }
 
   private:
     const qreal MIN_SCALE_FACTOR = 0.1;
+
     QSvgRenderer *renderer;
-    qreal scaleFactor; // Zoom factor
-    QPoint offset;     // Offset for panning
+    qreal scaleFactor;
+    QPoint offset;
     QFileSystemWatcher fileWatcher;
+    QTimer *updateTimer;
+    bool isDirty;
 
     void loadSvg(const QString &svgFilePath) {
-        if (renderer) {
-            // Delete the old renderer if it exists
-            delete renderer;
-        }
+        delete renderer;
         renderer = new QSvgRenderer(svgFilePath, this);
+        scheduleUpdate();
     }
 
-    void onFileChanged(const QString &filePath) {
-        // Reload the SVG when the file is modified
-        loadSvg(filePath);
-        update();
+    void onFileChanged(const QString &filePath) { loadSvg(filePath); }
+
+    void scheduleUpdate() {
+        if (!isDirty) {
+            isDirty = true;
+            updateTimer->start();
+        }
     }
 };
 
