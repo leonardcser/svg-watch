@@ -12,3 +12,6 @@ add_executable(svgwatch main.cpp)
 
 # Link Qt6 libraries
 target_link_libraries(svgwatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg)
+
+# Install
+install(TARGETS svgwatch DESTINATION bin)

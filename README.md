@@ -9,9 +9,21 @@ First make sure you make qt6 installed on your machine.
 Clone the repository and build with the following commands:
 
 ```bash
-mkdir build
-cd build && cmake ..
-make
+cmake -B build
+cmake --build build
+```
+
+To install the application:
+
+```bash
+cmake --build build --target install
+```
+
+Or set a custom prefix:
+
+```bash
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake --build build --target install
 ```
 
 ## Usage

@@ -153,6 +153,7 @@ int main(int argc, char *argv[]) {
 
     QString svgFilePath = argv[1];
     SvgWidget window(svgFilePath);
+    window.setWindowFlags(Qt::FramelessWindowHint);
     window.resize(800, 600);
     window.show();
     window.setWindowTitle(app.applicationName());
