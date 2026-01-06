@@ -1,5 +1,8 @@
 #include <QApplication>
 #include <QFileInfo>
+#ifdef Q_OS_MACOS
+#include <Cocoa/Cocoa.h>
+#endif
 #include <QFileSystemWatcher>
 #include <QGestureEvent>
 #include <QKeyEvent>
@@ -153,10 +156,17 @@ int main(int argc, char *argv[]) {
 
     QString svgFilePath = argv[1];
     SvgWidget window(svgFilePath);
-    window.setWindowFlags(Qt::FramelessWindowHint);
     window.resize(800, 600);
     window.show();
     window.setWindowTitle(app.applicationName());
+
+#ifdef Q_OS_MACOS
+    NSView *nsView = reinterpret_cast<NSView *>(window.winId());
+    NSWindow *nsWindow = [nsView window];
+    nsWindow.titlebarAppearsTransparent = YES;
+    nsWindow.titleVisibility = NSWindowTitleHidden;
+    nsWindow.styleMask |= NSWindowStyleMaskFullSizeContentView;
+#endif
 
     return app.exec();
 }
